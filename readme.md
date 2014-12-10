@@ -54,12 +54,14 @@ To fetch the original, unmodified image, just access it directly:
 
 `yourserver.com/some/file/photo.png/100`
 
-
 ## Using In HTML
 
 For the automatic scaling, first include the built-in JavaScript file.
 
 ## Roadmap
 
-1. Add support for TLS connections
-2. Allow remote configuration files via http/https
+- Allow timed/remote reload of configuration
+- Remove out-dated cache automatically
+- Write tests
+- Lock down sizing to a predefined set of widths (Small differences handled via CSS and 100% width, would also support srcset?)
+- Generate all sizes automatically on first visit.

@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"mime"
 	"net"
 	"net/http"
@@ -32,6 +33,9 @@ type Settings struct {
 	Listen    string            `json:"listen"`
 	Quality   int               `json:"quality"`
 	NumColors int               `json:"colors"`
+	Ssl		  bool              `json:"ssl"`
+	Cert      string            `json:"cert"`
+	Key       string            `json:"key"`
 }
 
 var configFile string
@@ -56,9 +60,16 @@ func main() {
 
 	http.Handle("/", r)
 
-	err = http.ListenAndServe(config.Listen, nil)
-	if err != nil {
-		log.Fatalf("[ERROR]\t%s", err.Error())
+	if config.Ssl {
+		err = http.ListenAndServeTLS(config.Listen, config.Cert, config.Key, nil)
+		if err != nil {
+			log.Fatalf("[ERROR]\t%s", err.Error())
+		}
+	} else {
+		err = http.ListenAndServe(config.Listen, nil)
+		if err != nil {
+			log.Fatalf("[ERROR]\t%s", err.Error())
+		}
 	}
 
 }
@@ -76,6 +87,8 @@ func getMime(fn string) string {
 	ext := filepath.Ext(fn)
 	return mime.TypeByExtension(ext)
 }
+
+
 
 func HandleImg(w http.ResponseWriter, r *http.Request) {
 
@@ -258,6 +271,19 @@ func getWidth(r *http.Request) (size int) {
 
 }
 
+func findClosest(subject float64, choices []float64) (result float64) {
+	lastDif := math.Inf(1)
+	for _, val := range choices {
+		dif := math.Max(subject, val) - math.Min(subject, val)
+		if dif <= lastDif {
+			lastDif = dif
+			result = val
+		}
+	}
+	return
+}
+
+
 func calcSize(r *http.Request, img image.Image) (w int, h int) {
 
 	ow := img.Bounds().Max.X - 1
@@ -279,17 +305,38 @@ func loadConfig() (err error) {
 
 	log.Printf("[STARTUP]\tStarting up...\n")
 
-	f, err := os.Open(configFile)
-	if err != nil {
-		log.Fatalf("[FATAL]\tCould not load config file %s: %v. Exiting.\n", configFile, err)
-	}
+	// Load remote configuration file via http/https
+	if strings.HasPrefix(configFile, "http") {
 
-	log.Printf("[STARTUP]\tLoaded config file: %s\n", configFile)
+		resp, err := http.Get(configFile)
+		if err != nil {
+			log.Fatalf("[FATAL]\tCould not load remote config file: %v. Exiting.\n", configFile, err)
+		}
+		defer resp.Body.Close()
+		c, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatalf("[FATAL]\tCould not read remote config file: %v. Exiting.\n", configFile, err)
+		}
+		err = json.Unmarshal(c, &config)
+		if err != nil {
+			log.Fatalf("[FATAL]\t %v\n", err)
+		}
 
-	c, err := ioutil.ReadAll(f)
-	err = json.Unmarshal(c, &config)
-	if err != nil {
-		log.Fatalf("[FATAL]\t %v\n", err)
+	} else {
+
+		f, err := os.Open(configFile)
+		if err != nil {
+			log.Fatalf("[FATAL]\tCould not load config file %s: %v. Exiting.\n", configFile, err)
+		}
+
+		log.Printf("[STARTUP]\tLoaded config file: %s\n", configFile)
+
+		c, err := ioutil.ReadAll(f)
+		err = json.Unmarshal(c, &config)
+		if err != nil {
+			log.Fatalf("[FATAL]\t %v\n", err)
+		}
+
 	}
 
 	if config.Storage == "" || storageDir != os.TempDir() {
