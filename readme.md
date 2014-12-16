@@ -87,7 +87,36 @@ ProxyPassReverse / http://localhost:4000
 
 ## Using In HTML
 
-For the automatic scaling, a JavaScript package is in the works. Check back soon.
+For the automatic scaling, a JavaScript package is being tested. The source is in the
+`assets` directory of the repository.
+
+The javascript file can be included by adding a script tag to the fixed location on
+the Proximity server. The server will set the correct parameters automatically for you:
+
+```html
+<script src="//yourserver.com/script"></script>
+```
+
+The resizing assumes the images will fit the parent container. As such, 
+you'll need to make sure the images have a the following css set up:
+
+```css
+.fluid {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+```
+
+The default class for the images is `.fluid`, although you can change that by passing the `c=className` to
+the server when including the script tag mentioned above:
+
+```html
+<script src="//yourserver.com/script?c=my-cool-class"></script>
+```
+
+In the example above, the JavaScript would then to it's work with any element with the class name `.my-cool-class`
+instead of the default class.
 
 ## Roadmap
 

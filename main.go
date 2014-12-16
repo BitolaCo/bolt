@@ -94,9 +94,25 @@ func HandleUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleScript(w http.ResponseWriter, r *http.Request) {
+
 	w.Header().Set("Content-Type", "text/javascript")
-	script := `!function(t,e){for(var a=document.getElementsByClassName(e||"fluid"),s=0;s<a.length;s++){var r=a[s],i=r.getAttribute("data-src"),n=r.getAttribute("data-bg");i&&(r.src=["/",t,r.offsetWidth,i].join("/")),n&&(r.style.backgroundImage="url("+["/",t,r.offsetWidth,n].join("/")+")")}}("%s","%s");`
-	fmt.Fprintf(w, script, r.FormValue("server"), r.FormValue("class"))
+	server := r.FormValue("server")
+
+	if server == "" {
+		prefix := "http://"
+		if r.TLS != nil {
+			prefix = "https://"
+		}
+		server = prefix + r.Host
+	}
+
+	class := r.FormValue("c")
+	if class == "" {
+		class = "fluid"
+	}
+
+	script := `!function(t,e){for(var a=document.getElementsByClassName(e),s=0;s<a.length;s++){var r=a[s],n=r.getAttribute("data-src"),o=r.getAttribute("data-bg");n&&(r.src=["/",t,r.offsetWidth,n].join("/")),o&&(r.style.backgroundImage="url("+["/",t,r.offsetWidth,o].join("/")+")")}}("%s","%s");`
+	fmt.Fprintf(w, script, server, class)
 }
 
 func HandleImg(w http.ResponseWriter, r *http.Request) {
