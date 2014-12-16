@@ -1,13 +1,14 @@
 {
   "hosts": {
-    "127.0.0.1": "upload.wikimedia.org"
+    "127.0.0.1": "upload.wikimedia.org",
+    "localhost": "upload.wikimedia.org"
   },
   "storage": "",
   "ttl": 1,
-  "listen": ":8000",
+  "listen": ":4000",
   "quality": 70,
   "colors": 256,
-  "ssl": true,
-  "cert": "./config/sample.crt",
-  "key": "./config/sample.key"
+  "ssl": false,
+  "cert": "/etc/proximity/ssl/sample.crt",
+  "key": "/etc/proximity/ssl/sample.key"
 }

@@ -44,17 +44,16 @@ var config Settings
 
 func main() {
 
-	flag.StringVar(&configFile, "config", "/etc/goimg/config.json", "The config file location")
+	flag.StringVar(&configFile, "config", "/etc/proximity/config.json", "The config file location")
 	flag.StringVar(&storageDir, "data", os.TempDir(), "The data file storage location")
 	flag.Parse()
 
 	err := loadConfig()
 	if err != nil {
-		log.Fatalf("[ERROR]\t%s", err.Error())
+		log.Fatalf("[ERROR] %s", err.Error())
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/{path:.*}/{width:[0-9]+}", HandleImg)
 	r.HandleFunc("/{width:[0-9]+}/{path:.*}", HandleImg)
 	r.HandleFunc("/{path:.*}", HandleImg)
 
@@ -63,23 +62,23 @@ func main() {
 	if config.Ssl {
 		err = http.ListenAndServeTLS(config.Listen, config.Cert, config.Key, nil)
 		if err != nil {
-			log.Fatalf("[ERROR]\t%s", err.Error())
+			log.Fatalf("[ERROR] %s", err.Error())
 		}
 	} else {
 		err = http.ListenAndServe(config.Listen, nil)
 		if err != nil {
-			log.Fatalf("[ERROR]\t%s", err.Error())
+			log.Fatalf("[ERROR] %s", err.Error())
 		}
 	}
 
 }
 
 func Warn(err error) {
-	log.Printf("[WARN]\t%s", err.Error())
+	log.Printf("[WARN] %s", err.Error())
 }
 
 func Error(w http.ResponseWriter, err error, code int) {
-	log.Printf("[ERROR %v]\t%s", code, err.Error())
+	log.Printf("[ERROR %v] %s", code, err.Error())
 	http.Error(w, err.Error(), code)
 }
 
@@ -87,8 +86,6 @@ func getMime(fn string) string {
 	ext := filepath.Ext(fn)
 	return mime.TypeByExtension(ext)
 }
-
-
 
 func HandleImg(w http.ResponseWriter, r *http.Request) {
 
@@ -129,10 +126,14 @@ func HandleImg(w http.ResponseWriter, r *http.Request) {
 	defer of.Close()
 
 	// Check for existence of scaled image in sizes we want.
+	widthStr := "orig"
 	width := getWidth(r)
+	if width != 0 {
+		widthStr = string(width)
+	}
 
-	// Ensure scaled directory exists
-	scaledName := fmt.Sprintf("%s/%s/%v/%s", strings.TrimSuffix(config.Storage, "/"), host, width, basename)
+	// Ensure (probably) scaled directory exists
+	scaledName := fmt.Sprintf("%s/%s/%v/%s", strings.TrimSuffix(config.Storage, "/"), host, widthStr, basename)
 	scaledDir := path.Dir(scaledName)
 	err = os.MkdirAll(scaledDir, 0755)
 	if err != nil {
@@ -185,10 +186,10 @@ func WriteServeGif(w http.ResponseWriter, r *http.Request, of *os.File, f *os.Fi
 
 func WriteServeImg(w http.ResponseWriter, r *http.Request, of *os.File, scaledName string) (err error) {
 
-	log.Printf("[CREATE]\t%s", scaledName)
+	log.Printf("[CREATE] %s", scaledName)
 	f, err := os.Create(scaledName)
 	if err != nil {
-		log.Printf("[ERROR]\tCould not create %s: %s", scaledName, err)
+		log.Printf("[ERROR] Could not create %s: %s", scaledName, err)
 		return
 	}
 	defer f.Close()
@@ -245,7 +246,6 @@ func getMethod(img image.Image, width int) (method resize.InterpolationFunction)
 
 func WriteServePng(w http.ResponseWriter, r *http.Request, of *os.File, f *os.File) (err error) {
 
-
 	img, err := png.Decode(of)
 	if err != nil {
 		Error(w, err, 500)
@@ -254,6 +254,9 @@ func WriteServePng(w http.ResponseWriter, r *http.Request, of *os.File, f *os.Fi
 
 	writer := io.MultiWriter(w, f)
 	width := getWidth(r)
+	if width == 0 {
+		width = img.Bounds().Max.X - 1
+	}
 	method := getMethod(img, width)
 
 	m := resize.Resize(uint(width), 0, img, method)
@@ -278,10 +281,6 @@ func getWidth(r *http.Request) (size int) {
 		}
 	}
 
-	if size == 0 {
-		size = 1920
-	}
-
 	return
 
 }
@@ -298,59 +297,40 @@ func findClosest(subject float64, choices []float64) (result float64) {
 	return
 }
 
-
-func calcSize(r *http.Request, img image.Image) (w int, h int) {
-
-	ow := img.Bounds().Max.X - 1
-	oh := img.Bounds().Max.Y - 1
-	ratio := float64(ow) / float64(oh)
-	w = ow
-	s := getWidth(r)
-	if s > 0 {
-		w = s
-	}
-	h = int(float64(w) * ratio)
-
-	log.Printf("h: %v w: %v ow: %v oh: %v ratio: %v img: %v", h, w, ow, oh, img.Bounds().Max.Y)
-
-	return
-
-}
-
 func loadConfig() (err error) {
 
-	log.Printf("[STARTUP]\tStarting up...\n")
+	log.Printf("[STARTUP] Starting up...\n")
 
 	// Load remote configuration file via http/https
 	if strings.HasPrefix(configFile, "http") {
 
 		resp, err := http.Get(configFile)
 		if err != nil {
-			log.Fatalf("[FATAL]\tCould not load remote config file: %v. Exiting.\n", configFile, err)
+			log.Fatalf("[FATAL] Could not load remote config file: %v. Exiting.\n", configFile, err)
 		}
 		defer resp.Body.Close()
 		c, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Fatalf("[FATAL]\tCould not read remote config file: %v. Exiting.\n", configFile, err)
+			log.Fatalf("[FATAL] Could not read remote config file: %v. Exiting.\n", configFile, err)
 		}
 		err = json.Unmarshal(c, &config)
 		if err != nil {
-			log.Fatalf("[FATAL]\t %v\n", err)
+			log.Fatalf("[FATAL]  %v\n", err)
 		}
 
 	} else {
 
 		f, err := os.Open(configFile)
 		if err != nil {
-			log.Fatalf("[FATAL]\tCould not load config file %s: %v. Exiting.\n", configFile, err)
+			log.Fatalf("[FATAL] Could not load config file %s: %v. Exiting.\n", configFile, err)
 		}
 
-		log.Printf("[STARTUP]\tLoaded config file: %s\n", configFile)
+		log.Printf("[STARTUP] Loaded config file: %s\n", configFile)
 
 		c, err := ioutil.ReadAll(f)
 		err = json.Unmarshal(c, &config)
 		if err != nil {
-			log.Fatalf("[FATAL]\t %v\n", err)
+			log.Fatalf("[FATAL]  %v\n", err)
 		}
 
 	}
@@ -363,9 +343,9 @@ func loadConfig() (err error) {
 		config.Storage += "/"
 	}
 
-	log.Printf("[STARTUP]\tStorage directory is: %s\n", config.Storage)
-	log.Printf("[STARTUP]\tListening on: %s\n", config.Listen)
-	log.Printf("[STARTUP]\tStartup succeeded\n")
+	log.Printf("[STARTUP] Storage directory is: %s\n", config.Storage)
+	log.Printf("[STARTUP] Listening on: %s\n", config.Listen)
+	log.Printf("[STARTUP] Startup succeeded\n")
 
 	return
 
@@ -376,13 +356,13 @@ func manageCache(fn string) (err error) {
 	// Now delete if expired.
 	f, err := os.Open(fn)
 	if err != nil {
-		log.Printf("[WARN]\tCould not open file: %s\n", fn)
+		log.Printf("[WARN] Could not open file: %s\n", fn)
 		return
 	}
 
 	info, err := f.Stat()
 	if err != nil {
-		log.Printf("[WARN]\tCould not read fileinfo: %s\n", fn)
+		log.Printf("[WARN] Could not read fileinfo: %s\n", fn)
 		return
 	}
 
@@ -391,10 +371,10 @@ func manageCache(fn string) (err error) {
 	if age > config.Ttl || size == 0 {
 		err = os.Remove(fn)
 		if err == nil {
-			log.Printf("[EXPIRED]\t%f\t%s\n", age, fn)
+			log.Printf("[EXPIRED] %f %s\n", age, fn)
 		}
 	} else {
-		log.Printf("[CACHE]\t%f\t%s\n", age, fn)
+		log.Printf("[CACHE] %f %s\n", age, fn)
 	}
 
 	// Append usage to server base dir.
@@ -402,14 +382,14 @@ func manageCache(fn string) (err error) {
 	logFile := fmt.Sprintf("%s/usage.log", base)
 	l, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0664)
 	if err != nil {
-		log.Printf("[ERROR]\tCould not open log file %s", logFile)
+		log.Printf("[ERROR] Could not open log file %s", logFile)
 		return
 	}
 	defer l.Close()
 
 	_, err = l.WriteString(fmt.Sprintf("%d,%d\n", size, time.Now().Unix()))
 	if err != nil {
-		log.Printf("[ERROR]\tCould not write to %s", logFile)
+		log.Printf("[ERROR] Could not write to %s", logFile)
 	}
 
 	return
@@ -417,7 +397,7 @@ func manageCache(fn string) (err error) {
 
 func saveFile(url string, fn string, ip string) (err error, code int) {
 
-	log.Printf("[DOWNLOAD]\t%s\t%s", ip, url)
+	log.Printf("[DOWNLOAD] %s %s", ip, url)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		code = 500
@@ -443,14 +423,14 @@ func saveFile(url string, fn string, ip string) (err error, code int) {
 	dir := path.Dir(fn)
 	err = os.MkdirAll(dir, 0755)
 	if err != nil {
-		log.Printf("[ERROR]\t%s\n", err)
+		log.Printf("[ERROR] %s\n", err)
 		return
 	}
 
 	// Open the file for writing.
 	f, err := os.Create(fn)
 	if err != nil {
-		log.Printf("[ERROR]\t%s\n", err)
+		log.Printf("[ERROR] %s\n", err)
 		return
 	}
 	defer f.Close()
