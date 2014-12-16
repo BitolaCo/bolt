@@ -107,7 +107,7 @@ func HandleImg(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure is an image
 	ftype := getMime(fn)
-	if !strings.HasPrefix(ftype, "image/") {
+	if ! strings.HasPrefix(ftype, "image/") || ftype == "image/vnd.microsoft.icon" {
 		msg := fmt.Sprintf("Invalid file %s", strings.TrimPrefix(strings.TrimPrefix(fn, config.Storage), host))
 		Error(w, errors.New(msg), 415)
 		return
@@ -173,8 +173,10 @@ func WriteServeGif(w http.ResponseWriter, r *http.Request, of *os.File, f *os.Fi
 	}
 
 	writer := io.MultiWriter(w, f)
-	width, height := calcSize(r, img)
-	m := resize.Thumbnail(uint(width), uint(height), img, resize.NearestNeighbor)
+	width := getWidth(r)
+	method := getMethod(img, width)
+
+	m := resize.Thumbnail(uint(width), 0, img, method)
 	err = gif.Encode(writer, m, &gif.Options{NumColors: config.NumColors})
 
 	return
@@ -223,15 +225,26 @@ func WriteServeJpeg(w http.ResponseWriter, r *http.Request, of *os.File, f *os.F
 	}
 
 	writer := io.MultiWriter(w, f)
-	width, height := calcSize(r, img)
-	m := resize.Thumbnail(uint(width), uint(height), img, resize.NearestNeighbor)
+	width := getWidth(r)
+	method := getMethod(img, width)
+	m := resize.Resize(uint(width), 0, img, method)
 	err = jpeg.Encode(writer, m, &jpeg.Options{Quality: config.Quality})
 
 	return
 
 }
 
+func getMethod(img image.Image, width int) (method resize.InterpolationFunction) {
+	// Check to see if upsizing or downsizing
+	method = resize.NearestNeighbor
+	if img.Bounds().Max.X - 1 < width {
+		method = resize.Lanczos3
+	}
+	return
+}
+
 func WriteServePng(w http.ResponseWriter, r *http.Request, of *os.File, f *os.File) (err error) {
+
 
 	img, err := png.Decode(of)
 	if err != nil {
@@ -240,8 +253,10 @@ func WriteServePng(w http.ResponseWriter, r *http.Request, of *os.File, f *os.Fi
 	}
 
 	writer := io.MultiWriter(w, f)
-	width, height := calcSize(r, img)
-	m := resize.Thumbnail(uint(width), uint(height), img, resize.NearestNeighbor)
+	width := getWidth(r)
+	method := getMethod(img, width)
+
+	m := resize.Resize(uint(width), 0, img, method)
 	err = png.Encode(writer, m)
 
 	return
@@ -287,15 +302,16 @@ func findClosest(subject float64, choices []float64) (result float64) {
 func calcSize(r *http.Request, img image.Image) (w int, h int) {
 
 	ow := img.Bounds().Max.X - 1
-	ratio := ow / (img.Bounds().Max.Y - 1)
+	oh := img.Bounds().Max.Y - 1
+	ratio := float64(ow) / float64(oh)
 	w = ow
 	s := getWidth(r)
 	if s > 0 {
-		if s < w {
-			w = s
-		}
+		w = s
 	}
-	h = w * ratio
+	h = int(float64(w) * ratio)
+
+	log.Printf("h: %v w: %v ow: %v oh: %v ratio: %v img: %v", h, w, ow, oh, img.Bounds().Max.Y)
 
 	return
 
