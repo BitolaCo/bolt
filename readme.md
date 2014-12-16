@@ -42,13 +42,23 @@ A sample configuration file looks like this:
   "hosts": {
     "127.0.0.1": "upload.wikimedia.org",
   },
-  "storage": "", // Path to store the cached files in. Defaults to system temp directory.
-  "ttl": 1, // Time to live of cached files, in minutes.
-  "listen": ":8000", // Address to bind/listen on. Leave off the ip address to listen on 0.0.0.0
-  "quality": 70, // Quality of resized JPEG's
-  "colors": 256 // # Colors in resampled gif's
+  "storage": "",
+  "ttl": 1, // 
+  "listen": ":4000",
+  "quality": 70, 
+  "colors": 256
 }
 ```
+
+Here's a rundown of each variable:
+
+- `hosts`: A key/value pair that matches the incoming address (i.e. `yourserver.com`) with the remote address (i.e. `upload.wikimedia.org`)
+- `storage` Path to store the cached files in. Defaults to system temp directory (maybe `/tmp`, who knows?)
+- `ttl` Time to live of cached files, in minutes.
+- `listen` Address to bind/listen on. Leave off the ip address to listen on 0.0.0.0
+- `quality` Quality of resized JPEG's. Applies to jpegs only.
+- `colors` Colors in resampled gif's. Applies to gif's only.
+
 
 Most important part here is probably the `hosts` and `listen` options.
 Hosts matches a reqest host name (the key) to an upstream server (where to fetch the images from).
