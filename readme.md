@@ -43,7 +43,7 @@ A sample configuration file looks like this:
     "127.0.0.1": "upload.wikimedia.org",
   },
   "storage": "",
-  "ttl": 1, // 
+  "ttl": 1,
   "listen": ":4000",
   "quality": 70, 
   "colors": 256
