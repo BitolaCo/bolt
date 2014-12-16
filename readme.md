@@ -90,6 +90,9 @@ ProxyPassReverse / http://localhost:4000
 For the automatic scaling, a JavaScript package is being tested. The source is in the
 `assets` directory of the repository.
 
+
+### Including the JavaScript file
+
 The javascript file can be included by adding a script tag to the fixed location on
 the Proximity server. The server will set the correct parameters automatically for you:
 
@@ -117,6 +120,36 @@ the server when including the script tag mentioned above:
 
 In the example above, the JavaScript would then to it's work with any element with the class name `.my-cool-class`
 instead of the default class.
+
+### Using Images
+
+Images need to have the class set (see above), and also have either a `data-src` or `data-bg` attribute 
+set (or both). You'll want to set up the image to have some kind of `src` until it can be loaded, so just
+use `data:` for now. (We're looking into valid options.)
+
+*The `data-src` and `data-bg` are relative to the root of the Proximity server, not the HTML page.*
+
+Here's an exmaple of a standard image:
+
+```html
+<img class="fluid" src="data:" data-src="/my/cool/image.png">
+```
+
+Here's an example of a background image:
+
+```html
+<span class="fluid" data-bg="/my/cool/background.jpg"></span>
+```
+
+Of course, if you don't want to use the auto-sizing feature via JavaScript, you don't have to.
+Just use the `src` attribute directly:
+
+```html
+<img src="//my-proximity-server/my/cool/image.png"><!-- standard size -->
+<img src="//my-proximity-server/32/my/cool/image.png"><!-- 32px width -->
+<img src="//my-proximity-server/my/cool/image.png?w=128"><!-- 128px width -->
+<!-- etc. -->
+```
 
 ## Roadmap
 
