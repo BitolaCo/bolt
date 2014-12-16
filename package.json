@@ -1,0 +1,23 @@
+{
+  "name": "image-service",
+  "version": "0.1.0",
+  "description": "A Golang powered image caching and resizing reverse proxy. It supports automatic, on-the-fly image resizing, and caches the results  for best performance.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BitolaCo/proximity.git"
+  },
+  "author": "Brad Berger <brad@bradb.net>",
+  "license": "MPL",
+  "bugs": {
+    "url": "https://github.com/BitolaCo/proximity/issues"
+  },
+  "devDependencies": {
+    "gulp": "^3.8.10",
+    "gulp-rename": "^1.2.0",
+    "gulp-uglify": "^1.0.2"
+  }
+}

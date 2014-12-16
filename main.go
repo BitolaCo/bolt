@@ -33,7 +33,7 @@ type Settings struct {
 	Listen    string            `json:"listen"`
 	Quality   int               `json:"quality"`
 	NumColors int               `json:"colors"`
-	Ssl		  bool              `json:"ssl"`
+	Ssl       bool              `json:"ssl"`
 	Cert      string            `json:"cert"`
 	Key       string            `json:"key"`
 }
@@ -56,7 +56,8 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/{width:[0-9]+}/{path:.*}", HandleImg)
 	r.HandleFunc("/{path:.*}", HandleImg)
-
+	http.HandleFunc("/script", HandleScript)
+	http.HandleFunc("/up", HandleUp)
 	http.Handle("/", r)
 
 	if config.Ssl {
@@ -87,6 +88,17 @@ func getMime(fn string) string {
 	return mime.TypeByExtension(ext)
 }
 
+func HandleUp(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, `{"up":true}`)
+}
+
+func HandleScript(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/javascript")
+	script := `!function(t,e){for(var a=document.getElementsByClassName(e||"fluid"),s=0;s<a.length;s++){var r=a[s],i=r.getAttribute("data-src"),n=r.getAttribute("data-bg");i&&(r.src=["/",t,r.offsetWidth,i].join("/")),n&&(r.style.backgroundImage="url("+["/",t,r.offsetWidth,n].join("/")+")")}}("%s","%s");`
+	fmt.Fprintf(w, script, r.FormValue("server"), r.FormValue("class"))
+}
+
 func HandleImg(w http.ResponseWriter, r *http.Request) {
 
 	host, ok := config.Hosts[strings.Split(r.Host, ":")[0]]
@@ -104,7 +116,7 @@ func HandleImg(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure is an image
 	ftype := getMime(fn)
-	if ! strings.HasPrefix(ftype, "image/") || ftype == "image/vnd.microsoft.icon" {
+	if !strings.HasPrefix(ftype, "image/") || ftype == "image/vnd.microsoft.icon" {
 		msg := fmt.Sprintf("Invalid file %s", strings.TrimPrefix(strings.TrimPrefix(fn, config.Storage), host))
 		Error(w, errors.New(msg), 415)
 		return
@@ -238,7 +250,7 @@ func WriteServeJpeg(w http.ResponseWriter, r *http.Request, of *os.File, f *os.F
 func getMethod(img image.Image, width int) (method resize.InterpolationFunction) {
 	// Check to see if upsizing or downsizing
 	method = resize.NearestNeighbor
-	if img.Bounds().Max.X - 1 < width {
+	if img.Bounds().Max.X-1 < width {
 		method = resize.Lanczos3
 	}
 	return

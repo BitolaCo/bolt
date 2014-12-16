@@ -99,3 +99,6 @@ For the automatic scaling, a JavaScript package is in the works. Check back soon
 - Logging to system log
 - Log performance with each request
 - Standardize the log format for easier parsing later on
+- Add blank image for spacing in client side
+- Add client side javascript fetch url.
+- Add support for background images `url(//some/image/file.png)`
