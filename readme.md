@@ -9,6 +9,7 @@ below, they would all result in an image that's 100px wide, with the height
 being relative to the width.
 
 `yourserver.com/100/some/file/photo.png`
+
 `yourserver.com/some/file/photo.png?w=100`
 
 To fetch the original, unmodified image, just access it directly:
@@ -104,14 +105,14 @@ The resizing assumes the images will fit the parent container. As such,
 you'll need to make sure the images have a the following css set up:
 
 ```css
-.fluid {
+.optimized {
   display: block;
   width: 100%;
   max-width: 100%;
 }
 ```
 
-The default class for the images is `.fluid`, although you can change that by passing the `c=className` to
+The default class for the images is `.optimized`, although you can change that by passing the `c=className` to
 the server when including the script tag mentioned above:
 
 ```html
@@ -132,13 +133,13 @@ use `data:` for now. (We're looking into valid options.)
 Here's an exmaple of a standard image:
 
 ```html
-<img class="fluid" src="data:" data-src="/my/cool/image.png">
+<img class="optimized" src="data:" data-src="/my/cool/image.png">
 ```
 
 Here's an example of a background image:
 
 ```html
-<span class="fluid" data-bg="/my/cool/background.jpg"></span>
+<span class="optimized" data-bg="/my/cool/background.jpg"></span>
 ```
 
 Of course, if you don't want to use the auto-sizing feature via JavaScript, you don't have to.
@@ -164,3 +165,9 @@ Just use the `src` attribute directly:
 - Add blank image for spacing in client side
 - Add client side javascript fetch url.
 - Add support for background images `url(//some/image/file.png)`
+
+## License
+
+Licensed under the [MPL](https://www.mozilla.org/MPL/) license.
+
+(c) 2015 Brad Berger and Bitola Software Company
