@@ -1,6 +1,3 @@
-/*! This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 package main
 
 import (
@@ -88,7 +85,7 @@ func Error(w http.ResponseWriter, err error, code int) {
 
 func getMime(fn string) string {
 	ext := filepath.Ext(fn)
-	return mime.TypeByExtension(ext)
+	return strings.Replace(mime.TypeByExtension(ext), "jpeg", "jpg", 1)
 }
 
 func HandleUp(w http.ResponseWriter, r *http.Request) {
@@ -126,7 +123,15 @@ func HandleImg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("X-Visit-Us", "https://bitola.co")
+	w.Header().Set("X-Author", "Brad Berger <brad@bitola.co>")
+	w.Header().Set("X-Server", "Proximity 0.1 by BitolaCo")
 	w.Header().Set("X-Forwarded-Host", host)
+	w.Header().Set("Vary", "Accept-Encoding")
+	w.Header().Set("Last-Modified", time.Now().AddDate(0, 0, -1).Format(http.TimeFormat))
+	w.Header().Set("Cache-Control", "max-age:290304000, public")
+	w.Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
+
 	vars := mux.Vars(r)
 
 	// Check if original file exists and serve if it does.
@@ -136,7 +141,8 @@ func HandleImg(w http.ResponseWriter, r *http.Request) {
 	// Make sure is an image
 	ftype := getMime(fn)
 	if !strings.HasPrefix(ftype, "image/") || ftype == "image/vnd.microsoft.icon" {
-		msg := fmt.Sprintf("Invalid file %s", strings.TrimPrefix(strings.TrimPrefix(fn, config.Storage), host))
+		file := strings.TrimPrefix(strings.TrimPrefix(fn, config.Storage), host)
+		msg := fmt.Sprintf("Invalid file %s of type %s", strings.TrimPrefix(file, "/orig"), ftype)
 		Error(w, errors.New(msg), 415)
 		return
 	}
@@ -160,11 +166,11 @@ func HandleImg(w http.ResponseWriter, r *http.Request) {
 	widthStr := "orig"
 	width := getWidth(r)
 	if width != 0 {
-		widthStr = string(width)
+		widthStr = strconv.Itoa(width)
 	}
 
 	// Ensure (probably) scaled directory exists
-	scaledName := fmt.Sprintf("%s/%s/%v/%s", strings.TrimSuffix(config.Storage, "/"), host, widthStr, basename)
+	scaledName := fmt.Sprintf("%s/%s/%s/%s", strings.TrimSuffix(config.Storage, "/"), host, widthStr, basename)
 	scaledDir := path.Dir(scaledName)
 	err = os.MkdirAll(scaledDir, 0755)
 	if err != nil {
@@ -223,20 +229,22 @@ func WriteServeImg(w http.ResponseWriter, r *http.Request, of *os.File, scaledNa
 		log.Printf("[ERROR] Could not create %s: %s", scaledName, err)
 		return
 	}
-	defer f.Close()
 
-	switch getMime(scaledName) {
+	m := getMime(scaledName)
+
+	switch m {
 	case "image/png":
 		err = WriteServePng(w, r, of, f)
 		break
 	case "image/jpg":
+		fmt.Println("image/jpeg")
 		err = WriteServeJpeg(w, r, of, f)
 		break
 	case "image/gif":
 		err = WriteServeGif(w, r, of, f)
 		break
 	default:
-		err = errors.New("Unsupported image type")
+		err = errors.New(fmt.Sprintf("Unsupported image type: %s", m))
 		break
 	}
 
@@ -256,9 +264,14 @@ func WriteServeJpeg(w http.ResponseWriter, r *http.Request, of *os.File, f *os.F
 		return
 	}
 
+	defer f.Close()
+	defer of.Close()
+
 	writer := io.MultiWriter(w, f)
 	width := getWidth(r)
 	method := getMethod(img, width)
+	fmt.Println(uint(width))
+
 	m := resize.Resize(uint(width), 0, img, method)
 	err = jpeg.Encode(writer, m, &jpeg.Options{Quality: config.Quality})
 
